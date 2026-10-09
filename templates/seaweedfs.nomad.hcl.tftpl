@@ -1,0 +1,94 @@
+job "${job_name}" {
+  namespace   = "${namespace}"
+  datacenters = ${jsonencode(datacenters)}
+  type        = "service"
+
+  meta {
+    secret_version = "${secret_version}"
+    backup         = "stop"
+  }
+
+  group "seaweedfs" {
+    network {
+      mode = "bridge"
+
+      port "s3" {
+        static       = ${s3_port}
+        to           = 8333
+        host_network = "${internal_network}"
+      }
+
+      port "master" {
+        static       = ${master_port}
+        to           = 9333
+        host_network = "${internal_network}"
+      }
+
+      port "metrics" {
+        static       = ${metrics_port}
+        to           = 9327
+        host_network = "${internal_network}"
+      }
+    }
+
+    volume "data" {
+      type            = "host"
+      source          = "${volume_name}"
+      access_mode     = "single-node-writer"
+      attachment_mode = "file-system"
+    }
+
+    service {
+      name     = "${job_name}"
+      port     = "s3"
+      provider = "consul"
+
+      check {
+        type     = "http"
+        port     = "master"
+        path     = "/cluster/status"
+        interval = "10s"
+        timeout  = "5s"
+      }
+    }
+
+    task "seaweedfs" {
+      driver = "docker"
+
+      config {
+        image = "${image}"
+        args = [
+          "server",
+          "-dir=/data",
+          "-s3",
+          "-s3.port=8333",
+          "-s3.config=/local/s3.json",
+          "-master.volumeSizeLimitMB=${volume_size_limit_mb}",
+          "-volume.max=0",
+          "-ip.bind=0.0.0.0",
+          "-metricsPort=9327",
+        ]
+        cap_drop = ["all"]
+      }
+
+      volume_mount {
+        volume      = "data"
+        destination = "/data"
+      }
+
+      vault {}
+
+      template {
+        destination = "local/s3.json"
+        data        = <<-S3
+          {{ with secret "${secret_path}" }}{"identities":[${identities_json}]}{{ end }}
+        S3
+      }
+
+      resources {
+        cpu    = ${resources.cpu}
+        memory = ${resources.memory}
+      }
+    }
+  }
+}
