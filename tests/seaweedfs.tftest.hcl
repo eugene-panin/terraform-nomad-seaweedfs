@@ -43,3 +43,12 @@ run "it_grants_the_actions_on_the_bucket_and_stays_internal" {
     error_message = "The lake must never bind the public host network."
   }
 }
+
+run "memory_is_reserved_by_use_and_may_grow" {
+  command = apply
+
+  assert {
+    condition     = strcontains(nomad_job.seaweedfs.jobspec, "memory     = 512") && strcontains(nomad_job.seaweedfs.jobspec, "memory_max = 1024")
+    error_message = "The task must reserve its usual memory and be allowed to grow to memory_max."
+  }
+}

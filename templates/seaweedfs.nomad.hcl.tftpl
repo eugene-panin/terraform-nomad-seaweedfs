@@ -86,8 +86,9 @@ job "${job_name}" {
       }
 
       resources {
-        cpu    = ${resources.cpu}
-        memory = ${resources.memory}
+        cpu        = ${resources.cpu}
+        memory     = ${resources.memory}
+        memory_max = ${resources.memory_max}
       }
     }
   }

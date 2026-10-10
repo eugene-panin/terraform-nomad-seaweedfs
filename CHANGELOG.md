@@ -9,3 +9,9 @@
 - A secret key is generated per identity and kept in Vault; each identity is
   granted the caller's actions on the bucket, so the access policy stays with the
   app that owns the lake. Prometheus metrics on the metrics port.
+
+## v0.1.1
+
+- The task reserves 512 MB, sized to its use, and may grow to 1024 MB:
+  `resources.memory_max` (Nomad memory oversubscription, which the platform
+  turns on). It reserved more than it used before.
