@@ -1,3 +1,4 @@
+mock_provider "consul" {}
 mock_provider "nomad" {}
 mock_provider "random" {}
 mock_provider "vault" {}
@@ -50,5 +51,40 @@ run "memory_is_reserved_by_use_and_may_grow" {
   assert {
     condition     = strcontains(nomad_job.seaweedfs.jobspec, "memory     = 512") && strcontains(nomad_job.seaweedfs.jobspec, "memory_max = 1024")
     error_message = "The task must reserve its usual memory and be allowed to grow to memory_max."
+  }
+}
+
+run "it_joins_the_mesh" {
+  command = apply
+
+  variables {
+    mesh = { enabled = true, allow = ["sauron-ingest"], keep_open_ports = [8333] }
+  }
+
+  assert {
+    condition = (
+      strcontains(nomad_job.seaweedfs.jobspec, "transparent_proxy")
+      && strcontains(nomad_job.seaweedfs.jobspec, "exclude_inbound_ports = [\"8333\",\"9333\",\"9327\",\"9102\"]")
+      && strcontains(nomad_job.seaweedfs.jobspec, "name     = \"seaweedfs-envoy\"")
+      && strcontains(nomad_job.seaweedfs.jobspec, "uid                   = \"1337\"")
+    )
+    error_message = "In the mesh the S3 gateway must sit behind an Envoy sidecar, keep the given ports, the master and metrics open, and expose Envoy's metrics."
+  }
+
+  assert {
+    condition = (
+      jsondecode(consul_config_entry.intentions[0].config_json).Sources == [{ Name = "sauron-ingest", Action = "allow" }]
+      && jsondecode(consul_config_entry.defaults[0].config_json).Protocol == "http"
+    )
+    error_message = "Only the allowed services may connect, and the protocol is http."
+  }
+}
+
+run "out_of_the_mesh_by_default" {
+  command = apply
+
+  assert {
+    condition     = !strcontains(nomad_job.seaweedfs.jobspec, "connect {") && length(consul_config_entry.intentions) == 0
+    error_message = "Without mesh.enabled there is no sidecar and no intentions."
   }
 }

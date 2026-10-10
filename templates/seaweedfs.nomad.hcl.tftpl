@@ -29,6 +29,14 @@ job "${job_name}" {
         to           = 9327
         host_network = "${internal_network}"
       }
+%{ if mesh.enabled ~}
+
+      # Envoy's metrics, scraped by the platform's Alloy for Consul's topology.
+      port "envoy_metrics" {
+        to           = 9102
+        host_network = "${internal_network}"
+      }
+%{ endif ~}
     }
 
     volume "data" {
@@ -42,6 +50,44 @@ job "${job_name}" {
       name     = "${job_name}"
       port     = "s3"
       provider = "consul"
+%{ if mesh.enabled ~}
+
+      # In the mesh: an Envoy sidecar takes the S3 clients' traffic (transparent
+      # proxy), so mesh services reach the lake as ${job_name}.virtual.consul, over
+      # mTLS, as the intentions allow. The master (the health check), SeaweedFS's
+      # metrics, the ports kept open and Envoy's metrics are still reached directly.
+      connect {
+        sidecar_service {
+          # Its own tags: the sidecar takes the service's otherwise.
+          tags = ["mesh-sidecar"]
+
+          proxy {
+            transparent_proxy {
+              # Envoy runs as uid 1337, which no app uses: the transparent proxy
+              # lets Envoy's own uid out unredirected.
+              uid                   = "1337"
+              no_dns                = true
+              exclude_inbound_ports = ${jsonencode(concat([for p in mesh.keep_open_ports : tostring(p)], ["9333", "9327", "9102"]))}
+            }
+            config {
+              envoy_prometheus_bind_addr = "0.0.0.0:9102"
+            }
+          }
+        }
+
+        sidecar_task {
+          env {
+            ENVOY_UID = "1337"
+          }
+
+          resources {
+            cpu        = 50
+            memory     = 32
+            memory_max = 128
+          }
+        }
+      }
+%{ endif ~}
 
       check {
         type     = "http"
@@ -51,6 +97,15 @@ job "${job_name}" {
         timeout  = "5s"
       }
     }
+%{ if mesh.enabled ~}
+
+    service {
+      name     = "${job_name}-envoy"
+      port     = "envoy_metrics"
+      provider = "consul"
+      tags     = ["metrics"]
+    }
+%{ endif ~}
 
     task "seaweedfs" {
       driver = "docker"

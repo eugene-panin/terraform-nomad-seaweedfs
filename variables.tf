@@ -98,3 +98,25 @@ variable "resources" {
     error_message = "resources.memory_max must be at least resources.memory."
   }
 }
+
+variable "mesh" {
+  description = <<-EOT
+    The Consul service mesh. enabled puts the S3 gateway behind an Envoy sidecar
+    (transparent proxy): mesh services reach it as <job_name>.virtual.consul over mTLS, and
+    only those in allow may (Consul intentions; any other is denied). keep_open_ports stay
+    reachable outside the mesh — for clients not in it yet, during a move into it; the
+    master and metrics ports always are. protocol is what Consul's L7 features see: http
+    for S3.
+  EOT
+  type = object({
+    enabled         = optional(bool, false)
+    allow           = optional(list(string), [])
+    keep_open_ports = optional(list(number), [])
+    protocol        = optional(string, "http")
+  })
+  default = {}
+  validation {
+    condition     = contains(["tcp", "http", "http2", "grpc"], var.mesh.protocol)
+    error_message = "mesh.protocol must be tcp, http, http2 or grpc."
+  }
+}

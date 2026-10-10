@@ -50,3 +50,12 @@ name), `data_volume`.
 make lint
 make module-tests
 ```
+
+## Service mesh
+
+With `mesh.enabled`, the job gets an Envoy sidecar (transparent proxy) and
+Consul config entries: `service-defaults` (`mesh.protocol`, http) and
+`service-intentions` allowing only `mesh.allow`. Mesh clients use the S3
+endpoint `<job_name>.virtual.consul:8333`. While some clients are not in the
+mesh yet, keep `8333` in `mesh.keep_open_ports`; drop it once they all are. The
+master (the health check) and metrics ports stay open.
