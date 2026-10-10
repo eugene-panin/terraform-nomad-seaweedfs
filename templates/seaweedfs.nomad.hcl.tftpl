@@ -12,8 +12,12 @@ job "${job_name}" {
     network {
       mode = "bridge"
 
+      # Nomad lets a static port bypass the mesh's sidecar, so in the mesh it is
+      # static only while kept open; mesh clients reach it through Envoy anyway.
       port "s3" {
+%{ if !mesh.enabled || contains(mesh.keep_open_ports, 8333) ~}
         static       = ${s3_port}
+%{ endif ~}
         to           = 8333
         host_network = "${internal_network}"
       }

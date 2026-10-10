@@ -25,3 +25,13 @@
   http, so Consul sees S3's requests. `mesh.keep_open_ports` stay reachable
   outside the mesh while clients move in; the master and metrics ports always
   are. Envoy's metrics are a `<job_name>-envoy` service tagged for Alloy.
+
+## v0.1.3
+
+- The mesh's config entries are written as Consul stores them (the empty
+  blocks it fills into service-defaults; Type and Precedence on each intention
+  source), so a plan no longer rewrites them on every apply.
+- In the mesh the client port is static only while it is in
+  `mesh.keep_open_ports`: Nomad lets any static port bypass the sidecar, so a
+  static port left the service open outside the mesh. Mesh clients reach it
+  through Envoy at `<job_name>.virtual.consul` either way.

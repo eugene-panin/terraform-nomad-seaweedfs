@@ -73,7 +73,7 @@ run "it_joins_the_mesh" {
 
   assert {
     condition = (
-      jsondecode(consul_config_entry.intentions[0].config_json).Sources == [{ Name = "sauron-ingest", Action = "allow" }]
+      jsondecode(consul_config_entry.intentions[0].config_json).Sources == [{ Name = "sauron-ingest", Action = "allow", Precedence = 9, Type = "consul" }]
       && jsondecode(consul_config_entry.defaults[0].config_json).Protocol == "http"
     )
     error_message = "Only the allowed services may connect, and the protocol is http."
@@ -86,5 +86,18 @@ run "out_of_the_mesh_by_default" {
   assert {
     condition     = !strcontains(nomad_job.seaweedfs.jobspec, "connect {") && length(consul_config_entry.intentions) == 0
     error_message = "Without mesh.enabled there is no sidecar and no intentions."
+  }
+}
+
+run "in_the_mesh_the_port_is_static_only_while_kept_open" {
+  command = apply
+
+  variables {
+    mesh = { enabled = true, allow = ["x"] }
+  }
+
+  assert {
+    condition     = !strcontains(nomad_job.seaweedfs.jobspec, "static       = 8333")
+    error_message = "Nomad lets a static port bypass the sidecar: in the mesh the s3 port must be dynamic unless kept open."
   }
 }
