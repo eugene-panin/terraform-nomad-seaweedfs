@@ -35,3 +35,9 @@
   `mesh.keep_open_ports`: Nomad lets any static port bypass the sidecar, so a
   static port left the service open outside the mesh. Mesh clients reach it
   through Envoy at `<job_name>.virtual.consul` either way.
+
+## v0.1.4
+
+- Envoy passes the mesh's traffic to the port inside the group
+  (`local_service_port`): with the port dynamic, it passed it to the host
+  port the service is registered with, where nothing listens.

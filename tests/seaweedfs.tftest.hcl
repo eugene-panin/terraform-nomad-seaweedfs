@@ -101,3 +101,16 @@ run "in_the_mesh_the_port_is_static_only_while_kept_open" {
     error_message = "Nomad lets a static port bypass the sidecar: in the mesh the s3 port must be dynamic unless kept open."
   }
 }
+
+run "envoy_passes_to_the_port_inside_the_group" {
+  command = apply
+
+  variables {
+    mesh = { enabled = true, allow = ["x"] }
+  }
+
+  assert {
+    condition     = strcontains(nomad_job.seaweedfs.jobspec, "local_service_port = ")
+    error_message = "With a dynamic port, Envoy must be told the port inside the group, or it passes the traffic to the host port, where nothing listens."
+  }
+}
