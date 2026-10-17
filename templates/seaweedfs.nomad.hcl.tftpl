@@ -54,6 +54,17 @@ job "${job_name}" {
       name     = "${job_name}"
       port     = "s3"
       provider = "consul"
+%{ if length(service_tags) > 0 ~}
+      tags     = ${jsonencode(service_tags)}
+%{ endif ~}
+%{ if length(service_meta) > 0 ~}
+
+      meta {
+%{ for k, v in service_meta ~}
+        ${k} = ${jsonencode(v)}
+%{ endfor ~}
+      }
+%{ endif ~}
 %{ if mesh.enabled ~}
 
       # In the mesh: an Envoy sidecar takes the S3 clients' traffic (transparent

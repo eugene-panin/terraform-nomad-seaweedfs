@@ -63,6 +63,8 @@ resource "nomad_job" "seaweedfs" {
     volume_size_limit_mb = var.volume_size_limit_mb
     resources            = var.resources
     mesh                 = var.mesh
+    service_tags         = var.service_tags
+    service_meta         = var.service_meta
   })
 
   purge_on_destroy = true

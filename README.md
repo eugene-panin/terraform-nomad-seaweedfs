@@ -38,6 +38,8 @@ key is generated and kept in Vault.
 | `volume_size_limit_mb` | `1024` | per-volume size limit |
 | `internal_host_network` | `default` | host network it binds to |
 | `resources` | `{500, 1024}` | `{cpu, memory}` |
+| `service_tags` | `[]` | tags of the Consul service, such as `damstack.provides=<capability>` |
+| `service_meta` | `{}` | meta of the Consul service, what else a client needs |
 
 ## Outputs
 
